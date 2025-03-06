@@ -27,11 +27,10 @@ def sample_data() -> pd.DataFrame:
 
     # Create a sample GDP time series.
     np.random.seed(42)
-    gdp = np.random.normal(100, 10, 100).cumsum() + 1000
-    gdp_ls_g = np.random.normal(100, 10, 100).cumsum() + 1000
+    values = np.random.normal(100, 10, 100).cumsum() + 1000
 
     # Return a pandas DataFrame with the GDP time series.
-    return pd.DataFrame({'gdp': gdp, 'gdp_ls_g': gdp_ls_g, 'dates': dates})
+    return pd.DataFrame({'values': values, 'dates': dates})
 
 @pytest.fixture
 def sample_csv_file(tmp_path: str, sample_data: pd.DataFrame) -> str:
@@ -56,7 +55,7 @@ def sample_csv_file(tmp_path: str, sample_data: pd.DataFrame) -> str:
     """
 
     # Create a temporary CSV file with sample data.
-    file_path = os.path.join(tmp_path, "test_gdp.csv")
+    file_path = os.path.join(tmp_path, "test_values.csv")
 
     # Write the sample GDP data to the CSV file.
     sample_data.to_csv(file_path, index=False)
@@ -87,7 +86,7 @@ def sample_excel_file(tmp_path: str, sample_data: pd.DataFrame) -> str:
     """
 
     # Create a temporary Excel file with sample data.
-    file_path = os.path.join(tmp_path, "test_gdp.xlsx")
+    file_path = os.path.join(tmp_path, "test_values.xlsx")
 
     # Convert dates to strings before writing to Excel.
     df_to_write = sample_data.copy()
@@ -120,14 +119,15 @@ def sample_json_file(tmp_path: str, sample_data: pd.DataFrame) -> str:
     """
 
     # Create a temporary JSON file with sample data.
-    file_path = os.path.join(tmp_path, "test_gdp.json")
+    file_path = os.path.join(tmp_path, "test_values.json")
 
-    # Convert dates to strings before writing to JSON.
+    # Convert dates to strings before writing to JSON. JSON may not
+    # support datetime objects. Let's also orient the data as records
+    # and indent the output to make it easier to read.
     df_to_write = sample_data.copy()
     df_to_write['dates'] = df_to_write['dates'].astype(str)
-    df_to_write.to_json(file_path, orient='records', index=False)
+    df_to_write.to_json(file_path, orient='records', indent=4, index=False)
 
-    # Return the path to the temporary JSON file.
     return file_path
 
 @pytest.fixture
@@ -149,24 +149,24 @@ def sample_yaml_file(tmp_path: str) -> str:
     # Create a temporary YAML file with configuration.
     file_path = os.path.join(tmp_path, "config.yaml")
 
-    # Create a simple configuration structure
+    # Create a simple configuration structure.
     config = {
         'data_source': {
             'url': 'https://example.com/data',
-            'format': 'csv'
+            'file_type': 'json'
         },
         'analysis': {
-            'start_date': '2000-01-01',
-            'end_date': '2024-12-31',
+            'observation_start': '2000-01-01',
+            'observation_end': '2024-12-31',
             'frequency': 'quarterly'
         },
         'output': {
-            'format': 'json',
-            'path': './results'
+            'file_type': 'json',
+            'path': '../data'
         }
     }
-    
-    # Write the configuration to file
+
+    # Write the configuration to file.
     with open(file_path, 'w') as f:
         yaml.dump(config, f)
 
