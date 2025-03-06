@@ -415,7 +415,7 @@ def test_load_api(mocker: pytest.MonkeyPatch) -> None:
     # Create an API loader instance with test parameters.
     loader = LoadAPI(
         "https://api.example.com/data",
-        parameters={'observation_start': '2000-01-01'},
+        params={'observation_start': '2000-01-01'},
         headers={'Authorization': 'Bearer token'}
     )
 
