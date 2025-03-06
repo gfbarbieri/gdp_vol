@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "gdp-volatility"
+version = "0.1.0"
+description = "Time-series volatility analysis of GDP."
+authors = ["Greg Barbieri <gfbarbieri@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.2.3"
+requests = "^2.32.3"
+ipykernel = "^6.29.5"
+pyyaml = "^6.0.2"
+pytest = "^8.3.5"
+openpyxl = "^3.1.5"
+pytest-mock = "^3.14.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
