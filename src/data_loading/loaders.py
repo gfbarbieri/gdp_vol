@@ -135,13 +135,11 @@ class DataRetriever:
             # an API endpoint.
             else:
                 # Get the details form the kwargs.
-                parameters = kwargs.get("parameters", {})
+                params = kwargs.get("params", {})
                 headers = kwargs.get("headers", {})
-                response_dtype = kwargs.get("response_dtype", None)
 
                 return LoadAPI(
-                    base_url=path_or_url, parameters=parameters,
-                    headers=headers, response_dtype=response_dtype
+                    base_url=path_or_url, params=params, headers=headers
                 )
 
         # CASE 2: User passes a local file path, which could be a CSV,
@@ -516,7 +514,7 @@ class JSONLoader(BaseLoader):
                     )
 
                 # Load the data into a DataFrame.
-                df = DataFrame(data[self.data_key], **kwargs)
+                df = DataFrame(data[data_key], **kwargs)
             else:
                 df = read_json(StringIO(response.text), **kwargs)
 
@@ -558,7 +556,7 @@ class LoadAPI(BaseLoader):
     ----------
     base_url : str
         The base URL for the API endpoint.
-    parameters : dict
+    params : dict
         Query parameters to include in the request.
     headers : dict
         HTTP headers to include in the request.
@@ -577,7 +575,7 @@ class LoadAPI(BaseLoader):
        # Create a LoadAPI object for a remote API endpoint.
        loader = LoadAPI(
            "https://api.example.com/data",
-           parameters={"start_date": "2020-01-01"},
+           params={"start_date": "2020-01-01"},
            headers={"Authorization": "Bearer token"}
        )
 
@@ -591,7 +589,7 @@ class LoadAPI(BaseLoader):
        # Create a LoadAPI object for a remote API endpoint.
        loader = LoadAPI(
            "https://api.example.com/data",
-           parameters={"start_date": "2020-01-01"},
+           params={"start_date": "2020-01-01"},
            headers={"Authorization": "Bearer token"}
        )
 
@@ -601,24 +599,26 @@ class LoadAPI(BaseLoader):
     """
 
     def __init__(
-            self, base_url: str, parameters: dict, headers: dict
+            self, base_url: str, params: dict, headers: dict
         ) -> None:
         """
         Parameters
         ----------
         base_url : str
             The base URL for the API endpoint.
-        parameters : dict
+        params : dict
             Query parameters to include in the request.
         headers : dict
             HTTP headers to include in the request.
         """
 
         self.base_url = base_url
-        self.parameters = parameters
+        self.params = params
         self.headers = headers
 
-    def load_data(self, data_key: str=None, **kwargs) -> DataFrame:
+    def load_data(
+            self, data_key: str=None, api_key: str=None, **kwargs
+        ) -> DataFrame:
         """
         Load the data from the API endpoint and return as a DataFrame.
 
@@ -627,6 +627,8 @@ class LoadAPI(BaseLoader):
         data_key : str, optional
             The key in the JSON response that contains the data to load
             into the DataFrame. If None, the entire response is loaded.
+        api_key : str, optional
+            The API key to use for the request.
         **kwargs
             Additional keyword arguments passed to pandas.DataFrame.
 
@@ -634,11 +636,27 @@ class LoadAPI(BaseLoader):
         -------
         DataFrame
             The data from the API endpoint.
+
+        Notes
+        -----
+        For security reasons, we will require users to supply an API
+        key via the load_data() method instead of the constructor. This
+        means updating the parameters dictionary with the API key if
+        it is provided before making the API request.
         """
+
+        # If an API key is provided, add it to the parameters.
+        if api_key:
+            params = self.params.copy()
+            params["api_key"] = api_key
+        else:
+            params = self.params
+
+        print(params)
 
         # Make the API request.
         response = requests.get(
-            url=self.base_url, params=self.parameters, headers=self.headers
+            url=self.base_url, params=params, headers=self.headers
         )
 
         # Raise an error if the request was unsuccessful.
