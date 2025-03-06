@@ -31,6 +31,7 @@ LoadAPI
 import os
 import requests
 import yaml
+import json
 
 from io import StringIO, BytesIO
 from pandas import DataFrame, read_csv, read_excel, read_json
@@ -51,9 +52,7 @@ class DataRetriever:
     path_or_url : str
         The file path or URL.
     kwargs : dict
-        Optional keyword arguments to pass to specific
-        retrievers (like delimiter for TXT files, data_format for API,
-        etc.).
+        Optional keyword arguments to pass to specific retrievers
 
     Methods
     -------
@@ -63,8 +62,15 @@ class DataRetriever:
 
     Examples
     --------
-    >>> retriever = DataRetriever.create("data.csv", delimiter=",")
-    >>> data = retriever.load_data()
+
+    .. code-block:: python
+
+        # Create a DataRetriever object for a CSV file.
+        retriever = DataRetriever.create("data.csv")
+
+        # Load the data.
+        data = retriever.load_data()
+
     """
 
     @staticmethod
@@ -78,8 +84,7 @@ class DataRetriever:
         path_or_url : str
             The file path or URL.
         kwargs : dict
-            Optional keyword arguments to pass to specific
-            retrievers (like delimiter for TXT files, data_format for API, etc.).
+            Optional keyword arguments to pass to specific retrievers.
 
         Returns
         -------
@@ -99,12 +104,10 @@ class DataRetriever:
             # CASE 1A: URL contains a file extension-like, suggesting a
             # remote file.
             if extsn != "":
-                # Get the delimiter from the kwargs.
-                delimiter = kwargs.get("delimiter", None)
                 
                 # Create appropriate loader based on extension.
                 if extsn in [".csv", ".txt", ".tsv"]:
-                    return CSVLoader(path_or_url, delimiter)
+                    return CSVLoader(path_or_url)
                 elif extsn in [".xlsx", ".xls"]:
                     return ExcelLoader(path_or_url)
                 elif extsn in [".yaml", ".yml"]:
@@ -123,7 +126,8 @@ class DataRetriever:
                 response_dtype = kwargs.get("response_dtype", None)
 
                 return LoadAPI(
-                    path_or_url, parameters, headers, response_dtype
+                    base_url=path_or_url, parameters=parameters,
+                    headers=headers, response_dtype=response_dtype
                 )
 
         # CASE 2: User passes a local file path, which could be a CSV,
@@ -132,8 +136,7 @@ class DataRetriever:
 
         # CASE 2A: CSV file.
         if extsn in [".csv", ".txt", ".tsv"]:
-            delimiter = kwargs.get("delimiter", None)
-            return CSVLoader(path_or_url, delimiter)
+            return CSVLoader(path_or_url)
         # CASE 2B: Excel file.
         elif extsn in [".xlsx", ".xls"]:
             return ExcelLoader(path_or_url)
@@ -172,14 +175,16 @@ class CSVLoader(BaseLoader):
         """
         Load the data from the CSV file and return as a DataFrame.
         
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments passed to pandas.read_csv or
+            pandas.DataFrame.
+
         Returns
         -------
         DataFrame
             The data from the CSV file.
-
-        Notes
-        -----
-        The `kwargs` parameter is passed to the `read_csv` function.
         """
 
         # CASE 1: The file is remote.
@@ -220,6 +225,11 @@ class ExcelLoader(BaseLoader):
         """
         Load the data from the Excel file and return as a DataFrame.
         
+        Parameters
+        ----------
+        **kwargs
+            Additional keyword arguments passed to pandas.read_excel.
+
         Returns
         -------
         DataFrame
@@ -271,6 +281,7 @@ class YAMLLoader(BaseLoader):
 
         # CASE 1: The file is remote.
         if self.is_remote:
+
             # Download the file content.
             response = requests.get(self.path_or_url)
             response.raise_for_status()
@@ -280,6 +291,7 @@ class YAMLLoader(BaseLoader):
 
         # CASE 2: The file is local.
         else:
+
             # Load YAML data from local file.
             with open(self.path_or_url, 'r') as f:
                 data = yaml.safe_load(f)
@@ -290,6 +302,13 @@ class JSONLoader(BaseLoader):
     """
     Concrete implementation for reading JSON files from local disk or
     HTTP(S).
+
+    Attributes
+    ----------
+    path_or_url : str
+        The path or URL to the JSON file.
+    is_remote : bool
+        Whether the JSON file is remote.
     """
 
     def __init__(self, path_or_url: str) -> None:
@@ -303,32 +322,75 @@ class JSONLoader(BaseLoader):
         self.path_or_url = path_or_url
         self.is_remote = path_or_url.startswith(("http://", "https://"))
 
-    def load_data(self, **kwargs) -> DataFrame:
+    def load_data(self, data_key: str=None, **kwargs) -> DataFrame:
         """
         Load the data from the JSON file and return as a DataFrame.
-        
+
+        Parameters
+        ----------
+        data_key : str, optional
+            The key in the JSON object that contains the data to load
+            into the DataFrame. If None, the entire JSON object is
+            loaded.
+        **kwargs
+            Additional keyword arguments passed to pandas.read_json or
+            pandas.DataFrame.
+
         Returns
         -------
         DataFrame
             The data from the JSON file.
-
-        Notes
-        -----
-        The `kwargs` parameter is passed to the `read_json` function.
         """
 
         # CASE 1: The file is remote.
         if self.is_remote:
+
             # Download the file content.
             response = requests.get(self.path_or_url)
             response.raise_for_status()
 
-            # Parse JSON from the response text.
-            df = read_json(StringIO(response.text), orient='records', **kwargs)
+            # CASE 1A: The user wants to load a specific key from the
+            # JSON object.
+            if data_key:
+
+                # Parse the JSON object.
+                data = json.loads(response.text)
+
+                # Check if the key exists in the JSON object.
+                if data_key not in data:
+                    raise KeyError(
+                        f"Data key '{data_key}' not found in JSON "
+                        "response"
+                    )
+
+                # Load the data into a DataFrame.
+                df = DataFrame(data[self.data_key], **kwargs)
+            else:
+                df = read_json(StringIO(response.text), **kwargs)
 
         # CASE 2: The file is local.
         else:
-            df = read_json(self.path_or_url, orient='records', **kwargs)
+
+            # See if the user wants to load a specific key from the JSON
+            if data_key:
+
+                # Load the JSON object.
+                with open(self.path_or_url, 'r') as f:
+                    data = json.load(f)
+
+                # Check if the key exists in the JSON object.
+                if data_key not in data:
+                    raise KeyError(
+                        f"Data key '{data_key}' not found in JSON "
+                        "response"
+                    )
+
+                # Load the data into a DataFrame.
+                df = DataFrame(data[data_key], **kwargs)
+
+            # The user wants to load the entire JSON object.
+            else:
+                df = read_json(self.path_or_url, **kwargs)
 
         return df
 
@@ -342,9 +404,8 @@ class LoadAPI(BaseLoader):
     """
 
     def __init__(
-        self, base_url: str, parameters: dict, headers: dict, 
-        response_dtype: str=None
-    ) -> None:
+            self, base_url: str, parameters: dict, headers: dict
+        ) -> None:
         """
         Parameters
         ----------
@@ -354,19 +415,26 @@ class LoadAPI(BaseLoader):
             Query parameters to include in the request.
         headers : dict
             HTTP headers to include in the request.
-        response_dtype : str, optional
-            The expected data type of the response.
         """
 
         self.base_url = base_url
         self.parameters = parameters
         self.headers = headers
-        self.response_dtype = response_dtype
 
-    def load_data(self) -> DataFrame:
+    def load_data(self, data_key: str=None, **kwargs) -> DataFrame:
         """
         Load the data from the API endpoint and return as a DataFrame.
-        
+
+        Parameters
+        ----------
+        data_key : str, optional
+            The key in the JSON object that contains the data to load
+            into the DataFrame. If None, the entire JSON object is
+            loaded.
+        **kwargs
+            Additional keyword arguments passed to pandas.DataFrame or
+            pandas.read_json.
+
         Returns
         -------
         DataFrame
@@ -375,17 +443,34 @@ class LoadAPI(BaseLoader):
 
         # Make the API request.
         response = requests.get(
-            self.base_url, params=self.parameters, headers=self.headers
+            url=self.base_url, params=self.parameters, headers=self.headers
         )
+
+        # Raise an error if the request was unsuccessful.
         response.raise_for_status()
 
         # Parse the response as JSON.
         data = response.json()
 
-        # Convert to DataFrame if the response contains a 'data' key.
-        if isinstance(data, dict) and 'data' in data:
-            df = DataFrame(data['data'])
+        # See if the user wants to load a specific key from the JSON.
+        if data_key:
+
+            # Load the JSON object.
+            with open(self.path_or_url, 'r') as f:
+                data = json.load(f)
+
+            # Check if the key exists in the JSON object.
+            if data_key not in data:
+                raise KeyError(
+                    f"Data key '{data_key}' not found in JSON "
+                    "response"
+                )
+
+            # Load the data into a DataFrame.
+            df = DataFrame(data[data_key], **kwargs)
+
+        # The user wants to load the entire JSON object.
         else:
-            df = DataFrame(data)
+            df = read_json(self.path_or_url, **kwargs)
 
         return df
