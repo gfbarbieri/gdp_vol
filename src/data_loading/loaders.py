@@ -51,8 +51,6 @@ class DataRetriever:
     ----------
     path_or_url : str
         The file path or URL.
-    kwargs : dict
-        Optional keyword arguments to pass to specific retrievers
 
     Methods
     -------
@@ -62,14 +60,30 @@ class DataRetriever:
 
     Examples
     --------
+    Create a DataRetriever object for a CSV file:
 
     .. code-block:: python
 
-        # Create a DataRetriever object for a CSV file.
-        retriever = DataRetriever.create("data.csv")
+       # Create a DataRetriever object for a CSV file.
+       retriever = DataRetriever.create(path_or_url="data.csv")
 
-        # Load the data.
-        data = retriever.load_data()
+       # Load the data.
+       data = retriever.load_data()
+
+    Create a DataRetriever for a remote JSON file with specific data
+    key:
+
+    .. code-block:: python
+
+       # Create a DataRetriever object for a remote JSON file with
+       # specific data key.
+       retriever = DataRetriever.create(
+           path_or_url="https://api.example.com/data.json",
+           data_key="observations"
+       )
+       
+       # Load the data.
+       data = retriever.load_data()
 
     """
 
@@ -88,8 +102,8 @@ class DataRetriever:
 
         Returns
         -------
-        Base
-            An instance of a class that implements Base.
+        BaseLoader
+            An instance of a class that implements BaseLoader.
         """
 
         # CASE 1: User passes a URL, which could either be an API
@@ -158,6 +172,42 @@ class CSVLoader(BaseLoader):
     """
     Concrete implementation for reading CSV files from local disk or
     HTTP(S).
+
+    Attributes
+    ----------
+    path_or_url : str
+        The path or URL to the CSV file.
+    is_remote : bool
+        Whether the file is remote (True) or local (False).
+
+    Methods
+    -------
+    load_data(**kwargs)
+        Load the data from the CSV file and return as a DataFrame.
+
+    Examples
+    --------
+    Load a local CSV file:
+
+    .. code-block:: python
+
+       # Create a CSVLoader object for a local CSV file.
+       loader = CSVLoader("data.csv")
+
+       # Load the data.
+       df = loader.load_data()
+
+    Load a remote CSV file with custom delimiter:
+
+    .. code-block:: python
+
+       # Create a CSVLoader object for a remote CSV file with a
+       # custom delimiter.
+       loader = CSVLoader("https://example.com/data.csv")
+
+       # Load the data.
+       df = loader.load_data(delimiter=";")
+
     """
 
     def __init__(self, path_or_url: str):
@@ -178,8 +228,7 @@ class CSVLoader(BaseLoader):
         Parameters
         ----------
         **kwargs
-            Additional keyword arguments passed to pandas.read_csv or
-            pandas.DataFrame.
+            Additional keyword arguments passed to pandas.read_csv.
 
         Returns
         -------
@@ -201,13 +250,47 @@ class CSVLoader(BaseLoader):
         else:
             df = read_csv(self.path_or_url, **kwargs)
 
-        # Return the DataFrame.
         return df
 
 class ExcelLoader(BaseLoader):
     """
     Concrete implementation for reading Excel (XLSX) files from local
     disk or HTTP(S).
+
+    Attributes
+    ----------
+    path_or_url : str
+        The path or URL to the Excel file.
+    is_remote : bool
+        Whether the file is remote (True) or local (False).
+
+    Methods
+    -------
+    load_data(**kwargs)
+        Load the data from the Excel file and return as a DataFrame.
+
+    Examples
+    --------
+    Load a local Excel file:
+
+    .. code-block:: python
+
+       # Create a ExcelLoader object for a local Excel file.
+       loader = ExcelLoader("data.xlsx")
+
+       # Load the data.
+       df = loader.load_data()
+
+    Load a specific sheet from a remote Excel file:
+
+    .. code-block:: python
+
+       # Create a ExcelLoader object for a remote Excel file.
+       loader = ExcelLoader("https://example.com/data.xlsx")
+
+       # Load the data.
+       df = loader.load_data(sheet_name="Sheet2")
+
     """
 
     def __init__(self, path_or_url: str) -> None:
@@ -256,6 +339,41 @@ class YAMLLoader(BaseLoader):
     """
     Concrete implementation for reading YAML files from local disk or
     HTTP(S).
+
+    Attributes
+    ----------
+    path_or_url : str
+        The path or URL to the YAML file.
+    is_remote : bool
+        Whether the file is remote (True) or local (False).
+
+    Methods
+    -------
+    load_data()
+        Load the data from the YAML file and return as a dictionary.
+
+    Examples
+    --------
+    Load a local YAML configuration file:
+
+    .. code-block:: python
+
+       # Create a YAMLLoader object for a local YAML file.
+       loader = YAMLLoader("config.yaml")
+
+       # Load the data.
+       config = loader.load_data()
+
+    Load a remote YAML configuration:
+
+    .. code-block:: python
+
+       # Create a YAMLLoader object for a remote YAML file.
+       loader = YAMLLoader("https://example.com/config.yaml")
+
+       # Load the data.
+       config = loader.load_data()
+
     """
 
     def __init__(self, path_or_url: str) -> None:
@@ -269,13 +387,13 @@ class YAMLLoader(BaseLoader):
         self.path_or_url = path_or_url
         self.is_remote = path_or_url.startswith(("http://", "https://"))
 
-    def load_data(self) -> DataFrame:
+    def load_data(self) -> dict:
         """
-        Load the data from the YAML file and return as a DataFrame.
+        Load the data from the YAML file and return as a dictionary.
         
         Returns
         -------
-        DataFrame
+        dict
             The data from the YAML file.
         """
 
@@ -308,7 +426,41 @@ class JSONLoader(BaseLoader):
     path_or_url : str
         The path or URL to the JSON file.
     is_remote : bool
-        Whether the JSON file is remote.
+        Whether the file is remote (True) or local (False).
+    data_key : str, optional
+        The key in the JSON object that contains the data to load into
+        the DataFrame.
+
+    Methods
+    -------
+    load_data(**kwargs)
+        Load the data from the JSON file and return as a DataFrame.
+
+    Examples
+    --------
+    Load a local JSON file:
+
+    .. code-block:: python
+
+       # Create a JSONLoader object for a local JSON file.
+       loader = JSONLoader("data.json")
+
+       # Load the data.
+       df = loader.load_data()
+
+    Load specific data from a remote JSON file:
+
+    .. code-block:: python
+
+       # Create a JSONLoader object for a remote JSON file with
+       # specific data key.
+       loader = JSONLoader(
+           "https://example.com/data.json", data_key="observations"
+       )
+
+       # Load the data.
+       df = loader.load_data()
+
     """
 
     def __init__(self, path_or_url: str) -> None:
@@ -401,6 +553,51 @@ class JSONLoader(BaseLoader):
 class LoadAPI(BaseLoader):
     """
     Concrete implementation for reading data from an HTTP API endpoint.
+
+    Attributes
+    ----------
+    base_url : str
+        The base URL for the API endpoint.
+    parameters : dict
+        Query parameters to include in the request.
+    headers : dict
+        HTTP headers to include in the request.
+
+    Methods
+    -------
+    load_data(data_key=None, **kwargs)
+        Load the data from the API endpoint and return as a DataFrame.
+
+    Examples
+    --------
+    Load data from an API endpoint:
+
+    .. code-block:: python
+
+       # Create a LoadAPI object for a remote API endpoint.
+       loader = LoadAPI(
+           "https://api.example.com/data",
+           parameters={"start_date": "2020-01-01"},
+           headers={"Authorization": "Bearer token"}
+       )
+
+       # Load the data.
+       df = loader.load_data()
+
+    Load specific data from an API response:
+
+    .. code-block:: python
+
+       # Create a LoadAPI object for a remote API endpoint.
+       loader = LoadAPI(
+           "https://api.example.com/data",
+           parameters={"start_date": "2020-01-01"},
+           headers={"Authorization": "Bearer token"}
+       )
+
+       # Load the data.
+       df = loader.load_data(data_key="observations")
+
     """
 
     def __init__(
@@ -428,12 +625,10 @@ class LoadAPI(BaseLoader):
         Parameters
         ----------
         data_key : str, optional
-            The key in the JSON object that contains the data to load
-            into the DataFrame. If None, the entire JSON object is
-            loaded.
+            The key in the JSON response that contains the data to load
+            into the DataFrame. If None, the entire response is loaded.
         **kwargs
-            Additional keyword arguments passed to pandas.DataFrame or
-            pandas.read_json.
+            Additional keyword arguments passed to pandas.DataFrame.
 
         Returns
         -------
@@ -455,15 +650,10 @@ class LoadAPI(BaseLoader):
         # See if the user wants to load a specific key from the JSON.
         if data_key:
 
-            # Load the JSON object.
-            with open(self.path_or_url, 'r') as f:
-                data = json.load(f)
-
-            # Check if the key exists in the JSON object.
+            # Check if the key exists in the response.
             if data_key not in data:
                 raise KeyError(
-                    f"Data key '{data_key}' not found in JSON "
-                    "response"
+                    f"Data key '{data_key}' not found in API response."
                 )
 
             # Load the data into a DataFrame.
@@ -471,6 +661,6 @@ class LoadAPI(BaseLoader):
 
         # The user wants to load the entire JSON object.
         else:
-            df = read_json(self.path_or_url, **kwargs)
+            df = DataFrame(data, **kwargs)
 
         return df
