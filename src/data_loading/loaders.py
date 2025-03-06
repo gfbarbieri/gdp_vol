@@ -652,8 +652,6 @@ class LoadAPI(BaseLoader):
         else:
             params = self.params
 
-        print(params)
-
         # Make the API request.
         response = requests.get(
             url=self.base_url, params=params, headers=self.headers
