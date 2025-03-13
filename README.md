@@ -70,8 +70,10 @@ cd gdp-vol
 Poetry:
 ```bash
 poetry install
+```
 
 Pip with requirements.txt:
+```bas
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
