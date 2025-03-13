@@ -66,17 +66,18 @@ cd gdp-vol
 ```
 
 2. Install dependencies
+
+Poetry:
 ```bash
-# Using poetry
 poetry install
 
-# Using pip
+Pip with requirements.txt:
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Create requirements.txt file from poetry, if required.
+Create requirements.txt file with poetry, if required.
 ```bash
 poetry export -f requirements.txt --output requirements.txt
 ```
