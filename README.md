@@ -1,6 +1,6 @@
 # GDP Volatility Analysis
 
-A Python package for analyzing GDP volatility through a modular pipeline that handles data loading, transformation, and analysis.
+A Python package for analyzing GDP volatility through a modular pipeline that handles data loading, transformation, and analysis. See the [report](docs/paper.md).
 
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
