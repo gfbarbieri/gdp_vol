@@ -1,3 +1,5 @@
+![GDP Volatility Analysis](assets/gdp.png)
+
 # GDP Volatility Analysis
 
 A Python package for analyzing GDP volatility through a modular pipeline that handles data loading, transformation, and analysis. See the [report](docs/paper.md).
